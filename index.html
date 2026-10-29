@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Andrea Canepa — Caja</title>
+<style>
+  :root{
+    --bg:#f6f4f1; --card:#fff; --ink:#1f1f1f; --muted:#7a7570; --line:#e4e0da;
+    --acc:#1f1f1f; --ok:#1f8f5a; --ok-bg:#e3f5ec; --warn:#b8860b; --bad:#c0392b; --bad-bg:#fbe9e7;
+    --sel:#111; --sel-ink:#fff; --radius:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  input,select{font:inherit;color:inherit}
+  .hidden{display:none!important}
+  .screen{min-height:100vh;display:flex;flex-direction:column}
+  .muted{color:var(--muted)}
+  .right{text-align:right}
+  .row{display:flex;align-items:center;gap:8px}
+  .grow{flex:1}
+  h1,h2,h3{margin:0;font-weight:600}
+  .brand{font-family:Georgia,"Times New Roman",serif;letter-spacing:.08em;text-transform:uppercase;font-weight:400}
+
+  /* ---------- Login ---------- */
+  #login{align-items:center;justify-content:center;padding:24px}
+  .login-box{width:100%;max-width:360px;text-align:center}
+  .login-box .brand{font-size:26px;margin-bottom:28px}
+  .pin-dots{display:flex;justify-content:center;gap:14px;margin:18px 0 24px;min-height:18px}
+  .pin-dots span{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+  .pin-dots span.on{background:var(--ink)}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .keypad button{height:64px;border-radius:var(--radius);background:var(--card);font-size:24px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .keypad button:active{background:#e9e5df}
+  .err{color:var(--bad);min-height:22px;margin-top:10px}
+
+  /* ---------- Top bar ---------- */
+  .top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
+  .top .brand{font-size:17px;flex:1}
+  .icon-btn{width:40px;height:40px;border-radius:50%;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.08);font-size:18px;display:flex;align-items:center;justify-content:center}
+  .badge{background:var(--warn);color:#fff;font-size:12px;padding:3px 8px;border-radius:999px}
+  .badge.bad{background:var(--bad)}
+
+  /* ---------- Caja (hoja) ---------- */
+  #caja .hoja{padding:12px 16px 140px;max-width:720px;margin:0 auto;width:100%}
+  .cat{margin:22px 0 8px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .item{background:var(--card);border-radius:var(--radius);margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.06);overflow:hidden}
+  .item-main{display:flex;align-items:center;min-height:58px;padding:0 14px;gap:12px}
+  .item-main .chk{width:26px;height:26px;border-radius:7px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .item.on .chk{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
+  .item-main .nombre{flex:1;font-size:17px}
+  .item-main .precio{font-variant-numeric:tabular-nums;font-size:17px;padding:6px 8px;border-radius:8px}
+  .item.on .precio{background:#f0ede8}
+  .item.on .precio.editado{color:var(--warn);font-weight:600}
+  .item-main .precio.muted{color:var(--muted)}
+  .qty{display:flex;align-items:center;gap:4px}
+  .qty button{width:34px;height:34px;border-radius:8px;background:#f0ede8;font-size:20px;line-height:1}
+  .qty span{min-width:22px;text-align:center;font-weight:600}
+  .variantes{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px 52px}
+  .variantes button{padding:9px 14px;border-radius:999px;background:#f0ede8;font-size:15px}
+  .variantes button.on{background:var(--sel);color:var(--sel-ink)}
+  .otros-form{display:flex;gap:8px;padding:0 14px 12px 52px}
+  .otros-form input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+  .otros-form input.monto{max-width:130px;text-align:right}
+
+  .barra{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:6}
+  .barra-in{max-width:720px;margin:0 auto}
+  .barra .linea{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);padding:2px 4px}
+  .barra .linea.desc{color:var(--bad)}
+  .barra .linea.desc button{color:var(--bad);font-size:18px;line-height:1;padding:0 6px}
+  .barra .acciones{display:flex;gap:10px;margin-top:6px}
+  .btn{padding:14px 18px;border-radius:var(--radius);font-weight:600;font-size:16px;background:#f0ede8}
+  .btn.primary{background:var(--acc);color:#fff;flex:1;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+  .btn.primary:disabled{opacity:.35;cursor:default}
+  .btn.ok{background:var(--ok);color:#fff}
+  .btn.danger{background:var(--bad-bg);color:var(--bad)}
+  .btn.small{padding:8px 12px;font-size:14px}
+
+  /* ---------- Modales ---------- */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+  @media(min-width:600px){.modal{align-items:center}}
+  .modal .box{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+  @media(min-width:600px){.modal .box{border-radius:18px}}
+  .box h2{font-size:20px;margin-bottom:12px}
+  .tabs{display:flex;background:#f0ede8;border-radius:10px;padding:4px;margin-bottom:12px}
+  .tabs button{flex:1;padding:10px;border-radius:8px;font-weight:600}
+  .tabs button.on{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .bigin{width:100%;font-size:28px;text-align:right;padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  .field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .resumen{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px}
+  .resumen div{display:flex;justify-content:space-between;padding:4px 0;font-size:15px}
+  .resumen .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:8px;font-weight:700;font-size:20px}
+  .medios{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
+  .medios button{padding:20px 10px;border-radius:12px;background:var(--acc);color:#fff;font-size:17px;font-weight:600}
+  .medios button:disabled{opacity:.5}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:120px;background:var(--ok);color:#fff;padding:14px 22px;border-radius:999px;font-weight:600;font-size:17px;z-index:30;box-shadow:0 4px 14px rgba(0,0,0,.2);transition:opacity .3s}
+  .toast.bad{background:var(--bad)}
+  .toast.info{background:var(--ink)}
+
+  /* ---------- Panel ---------- */
+  #panel .cuerpo{padding:12px 16px 40px;max-width:1100px;margin:0 auto;width:100%}
+  .nav{display:flex;gap:4px;background:#ebe7e1;border-radius:10px;padding:4px;margin-left:auto}
+  .nav button{padding:8px 14px;border-radius:8px;font-weight:600;font-size:14px}
+  .nav button.on{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+  .pcat{background:var(--card);border-radius:var(--radius);margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .pcat-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .pcat-h h3{flex:1;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
+  .mini{width:32px;height:32px;border-radius:8px;background:#f0ede8;font-size:14px;display:inline-flex;align-items:center;justify-content:center}
+  .mini:disabled{opacity:.3}
+  .psrv{padding:10px 14px;border-bottom:1px solid var(--line)}
+  .psrv:last-child{border-bottom:0}
+  .psrv.off{opacity:.5}
+  .psrv-h{display:flex;align-items:center;gap:8px}
+  .psrv-h .n{flex:1;font-weight:600}
+  .pvar{display:flex;align-items:center;gap:8px;padding:6px 0 0 20px}
+  .pvar .n{flex:1;color:var(--muted)}
+  .precio-in{width:120px;text-align:right;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums}
+  .precio-in.saved{border-color:var(--ok);background:var(--ok-bg)}
+  .sw{width:44px;height:26px;border-radius:999px;background:#d8d3cc;position:relative;flex-shrink:0}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+  .sw.on{background:var(--ok)}
+  .sw.on::after{left:21px}
+  .link{color:var(--muted);text-decoration:underline;font-size:14px;padding:8px 0}
+  .add-row{padding:8px 14px}
+
+  /* Tablero */
+  .periodo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+  .periodo button{padding:8px 14px;border-radius:999px;background:var(--card);font-weight:600;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .periodo button.on{background:var(--ink);color:#fff}
+  .periodo input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .kpi .l{font-size:13px;color:var(--muted)}
+  .kpi .v{font-size:26px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums}
+  .kpi .d{font-size:13px}
+  .kpi .d.up{color:var(--ok)} .kpi .d.down{color:var(--bad)}
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:800px){.grid2{grid-template-columns:1fr 1fr}}
+  .card{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:14px}
+  .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card h3 .tabs{margin:0 0 0 auto;padding:3px}
+  .card h3 .tabs button{padding:5px 10px;font-size:13px}
+  .chart-wrap{position:relative;height:260px}
+  .chart-wrap.tall{height:320px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.anulado td{opacity:.45;text-decoration:line-through}
+  .buscar{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+  .tbl-scroll{overflow:auto;max-height:520px}
+  .hbar{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
+  .hbar .n{width:140px;font-size:14px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar .b{flex:1;height:22px;background:#f0ede8;border-radius:6px;overflow:hidden}
+  .hbar .b i{display:block;height:100%;background:var(--ink)}
+  .hbar .v{width:110px;text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+  .hbar.sub .n{padding-left:16px;color:var(--muted)}
+  .hbar.sub .b i{background:#9c958d}
+  .empty{color:var(--muted);text-align:center;padding:30px 10px}
+
+  /* Ayuda */
+  .ayuda p{margin:8px 0}
+  .ayuda h3{margin-top:14px;font-size:15px}
+  .spinner{display:inline-block;width:18px;height:18px;border:3px solid #ccc;border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="screen">
+  <div class="login-box">
+    <div class="brand">Andrea<br>Canepa</div>
+    <div class="muted">Ingresá tu PIN</div>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="keypad" id="keypad"></div>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ============ CAJA ============ -->
+<div id="caja" class="screen hidden">
+  <div class="top">
+    <div class="brand" id="cajaTitulo">Andrea Canepa</div>
+    <span class="badge hidden" id="pendientes"></span>
+    <button class="icon-btn" id="btnAyudaCaja" title="Cómo se usa">?</button>
+    <button class="icon-btn" id="btnSalirCaja" title="Salir">⏻</button>
+  </div>
+  <div class="hoja" id="hoja"><div class="empty"><span class="spinner"></span> Cargando servicios…</div></div>
+  <div class="barra"><div class="barra-in">
+    <div class="linea"><span>Subtotal</span><span id="bSubtotal">$ 0</span></div>
+    <div class="linea desc hidden" id="bDescLinea"><span id="bDescTxt">Descuento</span><span><span id="bDescMonto"></span> <button id="btnQuitarDesc" title="Quitar descuento">×</button></span></div>
+    <div class="acciones">
+      <button class="btn" id="btnDesc">Descuento</button>
+      <button class="btn primary" id="btnCobrar" disabled><span>COBRAR</span><span id="bTotal">$ 0</span></button>
+    </div>
+  </div></div>
+</div>
+
+<!-- ============ PANEL ============ -->
+<div id="panel" class="screen hidden">
+  <div class="top">
+    <div class="brand">Andrea Canepa</div>
+    <div class="nav">
+      <button data-v="precios" class="on">Precios</button>
+      <button data-v="tablero">Tablero</button>
+      <button data-v="ajustes">Ajustes</button>
+    </div>
+    <button class="icon-btn" id="btnAyudaPanel" title="Cómo se usa">?</button>
+    <button class="icon-btn" id="btnSalirPanel" title="Salir">⏻</button>
+  </div>
+  <div class="cuerpo">
+    <div id="vPrecios"><div class="empty"><span class="spinner"></span> Cargando…</div></div>
+    <div id="vTablero" class="hidden"></div>
+    <div id="vAjustes" class="hidden"></div>
+  </div>
+</div>
+
+<div id="modales"></div>
+<div id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* =====================================================================
+   Infraestructura: API, sesión, cola offline, helpers
+   ===================================================================== */
+var LS = { token:'ac_token', rol:'ac_rol', cola:'ac_cola', catalogo:'ac_catalogo' };
+var ESTADO = { rol:null, catalogo:null, ticket:nuevoTicket(), enviando:false, panel:{ servicios:[], medios:[] }, tab:{ datos:null, periodo:'hoy', desde:null, hasta:null, rank:'cant', catAbierta:null }, charts:{} };
+
+function $(id){ return document.getElementById(id); }
+function fmt(n){ n = Math.round((Number(n)||0)*100)/100; return '$ ' + n.toLocaleString('es-AR',{minimumFractionDigits:0, maximumFractionDigits:2}); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function uid(){ var s=''; var a='abcdefghijklmnopqrstuvwxyz0123456789'; for(var i=0;i<16;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
+function lsGet(k, def){ try{ var v=localStorage.getItem(k); return v==null?def:JSON.parse(v); }catch(e){ return def; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+var ONLINE_GAS = !!(window.google && google.script && google.script.run);
+
+function api(metodo, payload){
+  payload = payload || {};
+  payload.__token = lsGet(LS.token, '');
+  return new Promise(function(res, rej){
+    var done = function(json){
+      var r; try{ r = JSON.parse(json); }catch(e){ return rej(new Error('Respuesta inválida del servidor')); }
+      if(!r.ok){
+        if(r.error === 'SESION_INVALIDA'){ cerrarSesion(); return rej(new Error('La sesión venció, ingresá el PIN de nuevo.')); }
+        return rej(new Error(r.error));
+      }
+      res(r.data);
+    };
+    if(ONLINE_GAS){
+      google.script.run.withSuccessHandler(done).withFailureHandler(function(e){ rej(new Error('Sin conexión con el servidor')); }).apiCall(metodo, JSON.stringify(payload));
+    } else {
+      setTimeout(function(){ try{ done(MOCK.apiCall(metodo, JSON.stringify(payload))); }catch(e){ rej(e); } }, 150);
+    }
+  });
+}
+
+function toast(msg, tipo, ms){
+  var t = document.createElement('div'); t.className='toast '+(tipo||''); t.textContent=msg;
+  $('toasts').appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 300); }, ms||2000);
+}
+function modal(html){
+  var m = document.createElement('div'); m.className='modal'; m.innerHTML='<div class="box">'+html+'</div>';
+  m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+  $('modales').appendChild(m); return m;
+}
+function confirmar(titulo, texto, btn, danger){
+  return new Promise(function(res){
+    var m = modal('<h2>'+esc(titulo)+'</h2><p>'+esc(texto)+'</p><div class="row" style="margin-top:14px"><button class="btn grow" id="cN">Cancelar</button><button class="btn grow '+(danger?'danger':'ok')+'" id="cS">'+esc(btn||'Confirmar')+'</button></div>');
+    m.querySelector('#cN').onclick=function(){ m.remove(); res(false); };
+    m.querySelector('#cS').onclick=function(){ m.remove(); res(true); };
+  });
+}
+function pedirTexto(titulo, campos){
+  // campos: [{k,label,value,type}]
+  return new Promise(function(res){
+    var html = '<h2>'+esc(titulo)+'</h2>';
+    campos.forEach(function(c){ html += '<div class="field"><label>'+esc(c.label)+'</label><input data-k="'+c.k+'" type="'+(c.type||'text')+'" '+(c.type==='number'?'inputmode="decimal" step="any" min="0"':'')+' value="'+esc(c.value||'')+'"></div>'; });
+    html += '<div class="row" style="margin-top:8px"><button class="btn grow" id="pN">Cancelar</button><button class="btn grow ok" id="pS">Guardar</button></div>';
+    var m = modal(html);
+    var first = m.querySelector('input'); if(first) setTimeout(function(){ first.focus(); }, 50);
+    var ok = function(){ var o={}; m.querySelectorAll('input').forEach(function(i){ o[i.dataset.k]=i.value.trim(); }); m.remove(); res(o); };
+    m.querySelector('#pN').onclick=function(){ m.remove(); res(null); };
+    m.querySelector('#pS').onclick=ok;
+    m.querySelectorAll('input').forEach(function(i){ i.addEventListener('keydown', function(e){ if(e.key==='Enter') ok(); }); });
+  });
+}
+
+/* =====================================================================
+   Login por PIN
+   ===================================================================== */
+var pinBuf = '';
+function renderLogin(){
+  var kp = $('keypad'); kp.innerHTML='';
+  ['1','2','3','4','5','6','7','8','9','⌫','0','OK'].forEach(function(k){
+    var b=document.createElement('button'); b.textContent=k;
+    b.onclick=function(){
+      if(k==='⌫') pinBuf=pinBuf.slice(0,-1);
+      else if(k==='OK') return enviarPin();
+      else if(pinBuf.length<8) pinBuf+=k;
+      pintarDots();
+      if(pinBuf.length===4 && !pinBuf.ok4) {} // se envía con OK para permitir PINs más largos
+    };
+    kp.appendChild(b);
+  });
+  pintarDots();
+}
+function pintarDots(){ var d=$('pinDots'); d.innerHTML=''; var n=Math.max(4,pinBuf.length); for(var i=0;i<n;i++){ var s=document.createElement('span'); if(i<pinBuf.length) s.className='on'; d.appendChild(s);} }
+function enviarPin(){
+  if(pinBuf.length<4){ $('loginErr').textContent='El PIN tiene al menos 4 dígitos.'; return; }
+  $('loginErr').textContent='';
+  api('loginPin',{pin:pinBuf}).then(function(r){
+    lsSet(LS.token, r.token); lsSet(LS.rol, r.rol); pinBuf=''; pintarDots(); entrar(r.rol);
+  }).catch(function(e){ $('loginErr').textContent=e.message; pinBuf=''; pintarDots(); });
+}
+function cerrarSesion(){ lsDel(LS.token); lsDel(LS.rol); ESTADO.rol=null; mostrar('login'); }
+function mostrar(id){ ['login','caja','panel'].forEach(function(s){ $(s).classList.toggle('hidden', s!==id); }); window.scrollTo(0,0); }
+function entrar(rol){
+  ESTADO.rol = rol;
+  if(rol==='caja'){ mostrar('caja'); cargarCatalogo(); reintentarCola(); }
+  else { mostrar('panel'); verPanel('precios'); }
+}
+
+/* =====================================================================
+   CAJA
+   ===================================================================== */
+function nuevoTicket(){ return { id:uid(), items:{}, otros:[], descTipo:'', descValor:0 }; }
+
+function cargarCatalogo(){
+  var cache = lsGet(LS.catalogo, null);
+  if(cache){ ESTADO.catalogo=cache; renderHoja(); }
+  api('catalogo').then(function(c){ ESTADO.catalogo=c; lsSet(LS.catalogo,c); $('cajaTitulo').textContent=c.negocio||'Andrea Canepa'; renderHoja(); })
+    .catch(function(e){ if(!cache) $('hoja').innerHTML='<div class="empty">No se pudo cargar la lista de servicios.<br>'+esc(e.message)+'<br><br><button class="btn" onclick="cargarCatalogo()">Reintentar</button></div>'; else toast('Sin conexión: usando la última lista de precios guardada','info',3000); });
+}
+
+function renderHoja(){
+  var c = ESTADO.catalogo; if(!c) return;
+  var t = ESTADO.ticket;
+  var h = '';
+  c.categorias.forEach(function(cat){
+    h += '<div class="cat">'+esc(cat.categoria)+'</div>';
+    cat.items.forEach(function(it){
+      var conVar = it.variantes.length>1 || (it.variantes.length===1 && it.variantes[0].variante);
+      var sel = null, selVar = null;
+      it.variantes.forEach(function(v){ if(t.items[v.id]){ sel=t.items[v.id]; selVar=v; } });
+      var key = esc(cat.categoria+'|'+it.servicio);
+      h += '<div class="item'+(sel?' on':'')+'" data-key="'+key+'">';
+      h += '<div class="item-main" data-act="toggle" data-key="'+key+'">';
+      h += '<div class="chk">'+(sel?'✓':'')+'</div><div class="nombre">'+esc(it.servicio)+(sel&&selVar.variante?' <span class="muted">· '+esc(selVar.variante)+'</span>':'')+'</div>';
+      if(sel){
+        h += '<div class="qty"><button data-act="menos" data-id="'+sel.id+'">−</button><span>'+sel.cantidad+'</span><button data-act="mas" data-id="'+sel.id+'">+</button></div>';
+        var p = sel.precio!=null?sel.precio:selVar.precio;
+        h += '<div class="precio'+(sel.precio!=null?' editado':'')+'" data-act="precio" data-id="'+sel.id+'" title="Tocá para cambiar el precio en este ticket">'+fmt(p*sel.cantidad)+'</div>';
+      } else if(!conVar){
+        h += '<div class="precio muted">'+fmt(it.variantes[0].precio)+'</div>';
+      } else {
+        h += '<div class="precio muted">›</div>';
+      }
+      h += '</div>';
+      if(conVar && (sel || t._abierto===cat.categoria+'|'+it.servicio)){
+        h += '<div class="variantes">';
+        it.variantes.forEach(function(v){ h += '<button data-act="var" data-id="'+v.id+'" class="'+(sel&&sel.id===v.id?'on':'')+'">'+esc(v.variante||'Único')+' · '+fmt(v.precio)+'</button>'; });
+        h += '</div>';
+      }
+      h += '</div>';
+    });
+  });
+  // Otros
+  h += '<div class="cat">Otros</div>';
+  t.otros.forEach(function(o, i){
+    h += '<div class="item on"><div class="item-main"><div class="chk">✓</div><div class="nombre">'+esc(o.descripcion)+'</div><div class="precio">'+fmt(o.precio)+'</div><button class="mini" data-act="quitarOtro" data-i="'+i+'">×</button></div></div>';
+  });
+  h += '<div class="item"><div class="item-main"><div class="chk" style="border-style:dashed"></div><div class="nombre muted">Otro servicio…</div></div>';
+  h += '<div class="otros-form"><input id="otroDesc" placeholder="Descripción"><input id="otroPrecio" class="monto" type="number" inputmode="decimal" placeholder="$"><button class="btn small" data-act="addOtro">Agregar</button></div></div>';
+  $('hoja').innerHTML = h;
+  renderBarra();
+}
+
+$('hoja').addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]'); if(!el) return;
+  var act = el.dataset.act, t = ESTADO.ticket, c = ESTADO.catalogo;
+  if(act==='toggle'){
+    var key = el.dataset.key; var parts = key.split('|'); var cat = c.categorias.filter(function(x){return x.categoria===parts[0];})[0];
+    var it = cat && cat.items.filter(function(x){return x.servicio===parts[1];})[0]; if(!it) return;
+    var conVar = it.variantes.length>1 || (it.variantes.length===1 && it.variantes[0].variante);
+    var selId = null; it.variantes.forEach(function(v){ if(t.items[v.id]) selId=v.id; });
+    if(selId){ delete t.items[selId]; t._abierto=null; }
+    else if(conVar){ t._abierto = (t._abierto===key)?null:key; }
+    else { t.items[it.variantes[0].id] = { id:it.variantes[0].id, cantidad:1, precio:null }; }
+    renderHoja();
+  } else if(act==='var'){
+    var id = el.dataset.id;
+    // quitar otras variantes del mismo servicio
+    c.categorias.forEach(function(cat){ cat.items.forEach(function(it){ if(it.variantes.some(function(v){return v.id===id;})) it.variantes.forEach(function(v){ delete t.items[v.id]; }); }); });
+    t.items[id] = { id:id, cantidad:1, precio:null }; t._abierto=null; renderHoja();
+  } else if(act==='mas'){ t.items[el.dataset.id].cantidad++; renderHoja(); }
+  else if(act==='menos'){ var x=t.items[el.dataset.id]; if(x.cantidad>1) x.cantidad--; else delete t.items[x.id]; renderHoja(); }
+  else if(act==='precio'){
+    var item = t.items[el.dataset.id]; var base = precioCatalogo(item.id);
+    pedirTexto('Precio para este ticket', [{k:'p', label:'Precio unitario (lista: '+fmt(base)+')', value: item.precio!=null?item.precio:base, type:'number'}]).then(function(r){
+      if(!r) return; var n=Number(r.p); if(isNaN(n)||n<0){ toast('Precio inválido','bad'); return; }
+      item.precio = (n===base)?null:n; renderHoja();
+    });
+  } else if(act==='addOtro'){
+    var d=$('otroDesc').value.trim(), p=Number($('otroPrecio').value);
+    if(!d){ toast('Escribí qué servicio es','bad'); $('otroDesc').focus(); return; }
+    if(!(p>0)){ toast('Poné un precio mayor a cero','bad'); $('otroPrecio').focus(); return; }
+    t.otros.push({descripcion:d, precio:p}); renderHoja();
+  } else if(act==='quitarOtro'){ t.otros.splice(Number(el.dataset.i),1); renderHoja(); }
+});
+
+function precioCatalogo(id){ var p=0; ESTADO.catalogo.categorias.forEach(function(c){ c.items.forEach(function(it){ it.variantes.forEach(function(v){ if(v.id===id) p=v.precio; }); }); }); return p; }
+function nombreCatalogo(id){ var n=''; ESTADO.catalogo.categorias.forEach(function(c){ c.items.forEach(function(it){ it.variantes.forEach(function(v){ if(v.id===id) n=it.servicio+(v.variante?' · '+v.variante:''); }); }); }); return n; }
+
+function calcTicket(){
+  var t=ESTADO.ticket, sub=0;
+  Object.keys(t.items).forEach(function(id){ var it=t.items[id]; var p=it.precio!=null?it.precio:precioCatalogo(id); sub+=p*it.cantidad; });
+  t.otros.forEach(function(o){ sub+=o.precio; });
+  sub=Math.round(sub*100)/100;
+  var desc=0;
+  if(t.descTipo==='%') desc=Math.round(sub*t.descValor)/100;
+  else if(t.descTipo==='$') desc=Math.min(sub, t.descValor);
+  desc=Math.round(desc*100)/100;
+  return { subtotal:sub, descuento:desc, total:Math.round((sub-desc)*100)/100, nItems:Object.keys(t.items).length+t.otros.length };
+}
+function renderBarra(){
+  var r=calcTicket(), t=ESTADO.ticket;
+  $('bSubtotal').textContent=fmt(r.subtotal);
+  $('bTotal').textContent=fmt(r.total);
+  $('btnCobrar').disabled = r.nItems===0 || ESTADO.enviando;
+  var hay = t.descTipo && t.descValor>0;
+  $('bDescLinea').classList.toggle('hidden', !hay);
+  if(hay){ $('bDescTxt').textContent='Descuento '+(t.descTipo==='%'?t.descValor+'%':''); $('bDescMonto').textContent='− '+fmt(r.descuento); }
+}
+$('btnQuitarDesc').onclick=function(){ ESTADO.ticket.descTipo=''; ESTADO.ticket.descValor=0; renderBarra(); };
+$('btnDesc').onclick=function(){
+  var t=ESTADO.ticket, tipo=t.descTipo||'%';
+  var m=modal('<h2>Descuento sobre el total</h2><div class="tabs"><button data-t="%" class="'+(tipo==='%'?'on':'')+'">Porcentaje %</button><button data-t="$" class="'+(tipo==='$'?'on':'')+'">Monto $</button></div><input class="bigin" id="descIn" type="number" inputmode="decimal" min="0" value="'+(t.descValor||'')+'" placeholder="0"><div class="muted" id="descPrev"></div><div class="row" style="margin-top:12px"><button class="btn grow" id="dQ">Sin descuento</button><button class="btn grow ok" id="dA">Aplicar</button></div>');
+  var inp=m.querySelector('#descIn'); setTimeout(function(){ inp.focus(); },50);
+  var prev=function(){ var v=Number(inp.value)||0; var s=calcTicket().subtotal; var d=tipo==='%'?s*v/100:Math.min(s,v); m.querySelector('#descPrev').textContent='Queda: '+fmt(s-d); };
+  m.querySelectorAll('.tabs button').forEach(function(b){ b.onclick=function(){ tipo=b.dataset.t; m.querySelectorAll('.tabs button').forEach(function(x){x.classList.toggle('on',x===b);}); prev(); }; });
+  inp.oninput=prev; prev();
+  m.querySelector('#dQ').onclick=function(){ t.descTipo=''; t.descValor=0; m.remove(); renderBarra(); };
+  m.querySelector('#dA').onclick=function(){ var v=Number(inp.value); if(!(v>0)){ t.descTipo=''; t.descValor=0; } else { if(tipo==='%'&&v>100){ toast('El porcentaje no puede superar 100','bad'); return; } t.descTipo=tipo; t.descValor=v; } m.remove(); renderBarra(); };
+};
+
+$('btnCobrar').onclick=function(){
+  var t=ESTADO.ticket, r=calcTicket(), c=ESTADO.catalogo;
+  var lineas='';
+  Object.keys(t.items).forEach(function(id){ var it=t.items[id]; var p=it.precio!=null?it.precio:precioCatalogo(id); lineas+='<div><span>'+(it.cantidad>1?it.cantidad+' × ':'')+esc(nombreCatalogo(id))+'</span><span>'+fmt(p*it.cantidad)+'</span></div>'; });
+  t.otros.forEach(function(o){ lineas+='<div><span>'+esc(o.descripcion)+'</span><span>'+fmt(o.precio)+'</span></div>'; });
+  if(r.descuento>0) lineas+='<div style="color:var(--bad)"><span>Descuento</span><span>− '+fmt(r.descuento)+'</span></div>';
+  lineas+='<div class="tot"><span>Total</span><span>'+fmt(r.total)+'</span></div>';
+  var medios=''; c.mediosPago.forEach(function(mp){ medios+='<button data-mp="'+esc(mp)+'">'+esc(mp)+'</button>'; });
+  var m=modal('<h2>Confirmar cobro</h2><div class="resumen">'+lineas+'</div><div class="field"><label>Cliente (opcional)</label><input id="cliIn" placeholder="Nombre" autocomplete="off" value="'+esc(t.cliente||'')+'"></div><div class="muted" style="font-size:13px">Tocá el medio de pago para registrar el cobro:</div><div class="medios" id="mediosBtns">'+medios+'</div><button class="link" id="cVolver" style="width:100%;margin-top:10px">Volver a la hoja</button>');
+  m.querySelector('#cVolver').onclick=function(){ t.cliente=m.querySelector('#cliIn').value; m.remove(); };
+  m.querySelectorAll('[data-mp]').forEach(function(b){ b.onclick=function(){
+    m.querySelectorAll('[data-mp]').forEach(function(x){x.disabled=true;});
+    var payload = armarPayload(t, m.querySelector('#cliIn').value.trim(), b.dataset.mp);
+    m.remove(); enviarCobro(payload);
+  }; });
+};
+
+function armarPayload(t, cliente, medio){
+  var items=[];
+  Object.keys(t.items).forEach(function(id){ var it=t.items[id]; items.push({servicioId:id, cantidad:it.cantidad, precio:it.precio}); });
+  t.otros.forEach(function(o){ items.push({servicioId:'OTROS', cantidad:1, precio:o.precio, descripcion:o.descripcion}); });
+  return { id:t.id, items:items, descTipo:t.descTipo, descValor:t.descValor, cliente:cliente, medioPago:medio, fechaHora:new Date().toISOString() };
+}
+
+function enviarCobro(payload){
+  var total = calcTicket().total;
+  ESTADO.ticket = nuevoTicket(); renderHoja();
+  ESTADO.enviando=true; renderBarra();
+  api('registrarCobro', payload).then(function(r){
+    ESTADO.enviando=false; renderBarra();
+    toast('Cobrado '+fmt(r.total!=null?r.total:total)+' ✓','',2200);
+    if(ESTADO.catalogo) api('catalogo').then(function(c){ ESTADO.catalogo=c; lsSet(LS.catalogo,c); if(calcTicket().nItems===0) renderHoja(); }).catch(function(){});
+  }).catch(function(e){
+    ESTADO.enviando=false; renderBarra();
+    if(/Sin conexión|sesión/i.test(e.message) && !/sesión/i.test(e.message)){
+      var cola=lsGet(LS.cola,[]); cola.push(payload); lsSet(LS.cola,cola); pintarPendientes();
+      toast('Sin señal: el cobro quedó guardado y se envía solo','info',3500);
+    } else {
+      toast('No se pudo registrar: '+e.message,'bad',4500);
+      // devolver el ticket a la hoja para que no se pierda
+      restaurarTicket(payload);
+    }
+  });
+}
+function restaurarTicket(p){
+  var t=nuevoTicket(); t.id=p.id; t.descTipo=p.descTipo; t.descValor=p.descValor; t.cliente=p.cliente;
+  p.items.forEach(function(it){ if(it.servicioId==='OTROS') t.otros.push({descripcion:it.descripcion,precio:it.precio}); else t.items[it.servicioId]={id:it.servicioId,cantidad:it.cantidad,precio:it.precio}; });
+  ESTADO.ticket=t; renderHoja();
+}
+function pintarPendientes(){ var n=lsGet(LS.cola,[]).length; var b=$('pendientes'); b.classList.toggle('hidden',n===0); b.textContent=n+' pendiente'+(n>1?'s':'')+' de enviar'; }
+var reintentando=false;
+function reintentarCola(){
+  pintarPendientes();
+  var cola=lsGet(LS.cola,[]); if(!cola.length||reintentando) return;
+  reintentando=true;
+  var p=cola[0];
+  api('registrarCobro',p).then(function(){ var c=lsGet(LS.cola,[]); c=c.filter(function(x){return x.id!==p.id;}); lsSet(LS.cola,c); reintentando=false; pintarPendientes(); if(c.length) reintentarCola(); else toast('Cobros pendientes enviados ✓'); })
+  .catch(function(e){ reintentando=false; if(!/Sin conexión/i.test(e.message)){ // error de datos: lo saco de la cola y aviso
+      var c=lsGet(LS.cola,[]).filter(function(x){return x.id!==p.id;}); lsSet(LS.cola,c); pintarPendientes(); toast('Un cobro pendiente fue rechazado: '+e.message,'bad',5000); } });
+}
+setInterval(function(){ if(ESTADO.rol==='caja') reintentarCola(); }, 30000);
+window.addEventListener('online', function(){ if(ESTADO.rol==='caja') reintentarCola(); });
+$('btnSalirCaja').onclick=function(){ confirmar('Salir','¿Cerrar la caja? Va a pedir el PIN de nuevo.','Salir',true).then(function(ok){ if(ok) cerrarSesion(); }); };
+$('btnAyudaCaja').onclick=function(){ modal(AYUDA_CAJA+'<button class="btn" style="width:100%;margin-top:12px" onclick="this.closest(\'.modal\').remove()">Cerrar</button>'); };
+
+/* =====================================================================
+   PANEL — navegación
+   ===================================================================== */
+document.querySelectorAll('.nav button').forEach(function(b){ b.onclick=function(){ verPanel(b.dataset.v); }; });
+function verPanel(v){
+  document.querySelectorAll('.nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.v===v); });
+  ['precios','tablero','ajustes'].forEach(function(x){ $('v'+x[0].toUpperCase()+x.slice(1)).classList.toggle('hidden', x!==v); });
+  if(v==='precios') cargarPrecios();
+  if(v==='tablero') cargarTablero();
+  if(v==='ajustes') renderAjustes();
+}
+$('btnSalirPanel').onclick=function(){ confirmar('Salir','¿Cerrar el panel?','Salir',true).then(function(ok){ if(ok) cerrarSesion(); }); };
+$('btnAyudaPanel').onclick=function(){ modal(AYUDA_PANEL+'<button class="btn" style="width:100%;margin-top:12px" onclick="this.closest(\'.modal\').remove()">Cerrar</button>'); };
+
+/* =====================================================================
+   PANEL — Precios
+   ===================================================================== */
+function cargarPrecios(){
+  api('listarServicios').then(function(r){ ESTADO.panel.servicios=r.servicios; ESTADO.panel.medios=r.mediosPago; renderPrecios(); })
+    .catch(function(e){ $('vPrecios').innerHTML='<div class="empty">'+esc(e.message)+'<br><br><button class="btn" onclick="cargarPrecios()">Reintentar</button></div>'; });
+}
+function renderPrecios(){
+  var ss=ESTADO.panel.servicios, cats=[];
+  ss.forEach(function(s){ if(cats.indexOf(s.categoria)<0) cats.push(s.categoria); });
+  var h='';
+  cats.forEach(function(cat, ci){
+    h+='<div class="pcat"><div class="pcat-h"><h3>'+esc(cat)+'</h3><button class="mini" data-act="renCat" data-cat="'+esc(cat)+'" title="Renombrar">✎</button><button class="mini" data-act="movCat" data-cat="'+esc(cat)+'" data-dir="-1" '+(ci===0?'disabled':'')+'>↑</button><button class="mini" data-act="movCat" data-cat="'+esc(cat)+'" data-dir="1" '+(ci===cats.length-1?'disabled':'')+'>↓</button></div>';
+    var grupos=[]; ss.filter(function(s){return s.categoria===cat;}).forEach(function(s){ var g=grupos.filter(function(x){return x.nombre===s.servicio;})[0]; if(!g){ g={nombre:s.servicio,filas:[]}; grupos.push(g);} g.filas.push(s); });
+    grupos.forEach(function(g, gi){
+      var unico = g.filas.length===1 && !g.filas[0].variante;
+      var activo = g.filas.some(function(f){return f.activo;});
+      h+='<div class="psrv'+(activo?'':' off')+'"><div class="psrv-h">';
+      h+='<span class="n">'+esc(g.nombre)+'</span>';
+      if(unico){ var f=g.filas[0]; h+='<input class="precio-in" type="number" inputmode="decimal" min="0" step="any" data-act="precio" data-id="'+f.id+'" value="'+f.precio+'">'; }
+      h+='<button class="sw'+(activo?' on':'')+'" data-act="activo" data-ids="'+g.filas.map(function(f){return f.id;}).join(',')+'" data-on="'+(activo?1:0)+'" title="'+(activo?'Ocultar en la caja':'Mostrar en la caja')+'"></button>';
+      h+='<button class="mini" data-act="renSrv" data-id="'+g.filas[0].id+'" title="Renombrar">✎</button>';
+      h+='<button class="mini" data-act="movSrv" data-id="'+g.filas[0].id+'" data-dir="-1" '+(gi===0?'disabled':'')+'>↑</button><button class="mini" data-act="movSrv" data-id="'+g.filas[0].id+'" data-dir="1" '+(gi===grupos.length-1?'disabled':'')+'>↓</button>';
+      h+='</div>';
+      if(!unico){
+        g.filas.forEach(function(f){
+          h+='<div class="pvar'+(f.activo?'':' off')+'"><span class="n">'+esc(f.variante||'(sin nombre)')+'</span><input class="precio-in" type="number" inputmode="decimal" min="0" step="any" data-act="precio" data-id="'+f.id+'" value="'+f.precio+'"><button class="sw'+(f.activo?' on':'')+'" data-act="activo" data-ids="'+f.id+'" data-on="'+(f.activo?1:0)+'"></button><button class="mini" data-act="renVar" data-id="'+f.id+'" title="Renombrar variante">✎</button></div>';
+        });
+      }
+      h+='<div style="padding:6px 0 0 20px"><button class="link" data-act="addVar" data-cat="'+esc(cat)+'" data-srv="'+esc(g.nombre)+'" data-unico="'+(unico?1:0)+'">+ variante</button></div>';
+      h+='</div>';
+    });
+    h+='<div class="add-row"><button class="link" data-act="addSrv" data-cat="'+esc(cat)+'">+ Agregar servicio en '+esc(cat)+'</button></div></div>';
+  });
+  h+='<div class="add-row"><button class="btn" data-act="addCat">+ Nueva categoría</button></div>';
+  h+='<p class="muted" style="font-size:13px">Los precios se guardan solos al salir del campo. Los servicios apagados no aparecen en la caja pero conservan su historial. No se puede borrar: apagalo.</p>';
+  $('vPrecios').innerHTML=h;
+}
+$('vPrecios').addEventListener('change', function(e){
+  var el=e.target; if(el.dataset.act!=='precio') return;
+  var v=Number(el.value); if(isNaN(v)||v<0){ toast('Precio inválido','bad'); return; }
+  api('actualizarServicio',{id:el.dataset.id, precio:v}).then(function(){ el.classList.add('saved'); setTimeout(function(){el.classList.remove('saved');},1500); var s=ESTADO.panel.servicios.filter(function(x){return x.id===el.dataset.id;})[0]; if(s) s.precio=v; toast('Guardado ✓','',1200); })
+    .catch(function(err){ toast(err.message,'bad',4000); });
+});
+$('vPrecios').addEventListener('click', function(e){
+  var el=e.target.closest('[data-act]'); if(!el) return; var act=el.dataset.act;
+  var reload=function(p){ return p.then(function(){ cargarPrecios(); }).catch(function(err){ toast(err.message,'bad',4000); }); };
+  if(act==='activo'){
+    var on=el.dataset.on==='1'; var ids=el.dataset.ids.split(',');
+    reload(Promise.all(ids.map(function(id){ return api('actualizarServicio',{id:id, activo:!on}); })));
+  } else if(act==='movSrv'){ reload(api('moverServicio',{id:el.dataset.id, dir:Number(el.dataset.dir)})); }
+  else if(act==='movCat'){ reload(api('moverCategoria',{categoria:el.dataset.cat, dir:Number(el.dataset.dir)})); }
+  else if(act==='renCat'){ pedirTexto('Renombrar categoría',[{k:'n',label:'Nombre',value:el.dataset.cat}]).then(function(r){ if(r&&r.n) reload(api('renombrarCategoria',{vieja:el.dataset.cat, nueva:r.n})); }); }
+  else if(act==='renSrv'){ var s=ESTADO.panel.servicios.filter(function(x){return x.id===el.dataset.id;})[0]; pedirTexto('Renombrar servicio',[{k:'n',label:'Nombre',value:s.servicio}]).then(function(r){ if(r&&r.n) reload(api('actualizarServicio',{id:s.id, servicio:r.n})); }); }
+  else if(act==='renVar'){ var sv=ESTADO.panel.servicios.filter(function(x){return x.id===el.dataset.id;})[0]; pedirTexto('Renombrar variante',[{k:'n',label:'Variante',value:sv.variante}]).then(function(r){ if(r&&r.n) reload(api('actualizarServicio',{id:sv.id, variante:r.n})); }); }
+  else if(act==='addSrv'){ pedirTexto('Nuevo servicio en '+el.dataset.cat,[{k:'n',label:'Nombre'},{k:'p',label:'Precio',type:'number'}]).then(function(r){ if(!r) return; if(!r.n){ toast('Falta el nombre','bad'); return; } reload(api('crearServicio',{categoria:el.dataset.cat, servicio:r.n, precio:Number(r.p)||0})); }); }
+  else if(act==='addVar'){
+    var unico=el.dataset.unico==='1';
+    var campos=[{k:'v',label:'Nombre de la variante (ej. Corto, Largo)'},{k:'p',label:'Precio',type:'number'}];
+    if(unico) campos.unshift({k:'v0',label:'Este servicio tenía precio único. ¿Cómo se llama esa variante actual? (ej. Corto)'});
+    pedirTexto('Agregar variante a '+el.dataset.srv, campos).then(function(r){
+      if(!r) return; if(!r.v){ toast('Falta el nombre de la variante','bad'); return; }
+      var pre=Promise.resolve();
+      if(unico){ if(!r.v0){ toast('Poné un nombre para la variante actual','bad'); return; } var s0=ESTADO.panel.servicios.filter(function(x){return x.categoria===el.dataset.cat&&x.servicio===el.dataset.srv;})[0]; pre=api('actualizarServicio',{id:s0.id, variante:r.v0}); }
+      reload(pre.then(function(){ return api('crearServicio',{categoria:el.dataset.cat, servicio:el.dataset.srv, variante:r.v, precio:Number(r.p)||0}); }));
+    });
+  }
+  else if(act==='addCat'){ pedirTexto('Nueva categoría',[{k:'c',label:'Nombre de la categoría'},{k:'n',label:'Primer servicio'},{k:'p',label:'Precio',type:'number'}]).then(function(r){ if(!r) return; if(!r.c||!r.n){ toast('Completá categoría y servicio','bad'); return; } reload(api('crearServicio',{categoria:r.c, servicio:r.n, precio:Number(r.p)||0})); }); }
+});
+
+/* =====================================================================
+   PANEL — Ajustes
+   ===================================================================== */
+function renderAjustes(){
+  var medios=ESTADO.panel.medios||[];
+  var h='<div class="card"><h3>Medios de pago</h3><div id="mediosLista"></div><div class="row" style="margin-top:8px"><input id="medioNuevo" class="buscar" style="margin:0" placeholder="Nuevo medio de pago"><button class="btn small" id="medioAdd">Agregar</button></div></div>';
+  h+='<div class="card"><h3>PIN de la caja</h3><div class="row"><input id="pinCaja" class="buscar" style="margin:0" type="password" inputmode="numeric" placeholder="Nuevo PIN (4 a 8 dígitos)"><button class="btn small" data-pin="caja">Cambiar</button></div></div>';
+  h+='<div class="card"><h3>PIN del panel</h3><div class="row"><input id="pinPanel" class="buscar" style="margin:0" type="password" inputmode="numeric" placeholder="Nuevo PIN (4 a 8 dígitos)"><button class="btn small" data-pin="panel">Cambiar</button></div><p class="muted" style="font-size:13px">Si cambiás el PIN del panel, la próxima vez que entres acá vas a usar el nuevo.</p></div>';
+  $('vAjustes').innerHTML=h;
+  var pintar=function(){ $('mediosLista').innerHTML=medios.map(function(m,i){ return '<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="grow">'+esc(m)+'</span><button class="mini" data-del="'+i+'" '+(medios.length<=1?'disabled':'')+'>×</button></div>'; }).join(''); };
+  var guardar=function(){ api('guardarMediosPago',{lista:medios}).then(function(l){ medios=l; ESTADO.panel.medios=l; pintar(); toast('Guardado ✓','',1200); }).catch(function(e){ toast(e.message,'bad',4000); }); };
+  pintar();
+  $('mediosLista').onclick=function(e){ var b=e.target.closest('[data-del]'); if(!b) return; confirmar('Quitar medio de pago','¿Quitar "'+medios[b.dataset.del]+'"? Los cobros viejos lo conservan.','Quitar',true).then(function(ok){ if(ok){ medios.splice(Number(b.dataset.del),1); guardar(); } }); };
+  $('medioAdd').onclick=function(){ var v=$('medioNuevo').value.trim(); if(!v) return; if(medios.some(function(m){return m.toLowerCase()===v.toLowerCase();})){ toast('Ya existe','bad'); return; } medios.push(v); $('medioNuevo').value=''; guardar(); };
+  $('vAjustes').querySelectorAll('[data-pin]').forEach(function(b){ b.onclick=function(){
+    var rol=b.dataset.pin; var inp=$(rol==='caja'?'pinCaja':'pinPanel'); var v=inp.value.trim();
+    if(!/^\d{4,8}$/.test(v)){ toast('El PIN tiene que ser de 4 a 8 dígitos','bad'); return; }
+    api('cambiarPin',{rol:rol, pinNuevo:v}).then(function(){ inp.value=''; toast('PIN cambiado ✓'); }).catch(function(e){ toast(e.message,'bad',4000); });
+  }; });
+}
+
+/* =====================================================================
+   PANEL — Tablero
+   ===================================================================== */
+function cargarTablero(){
+  var T=ESTADO.tab;
+  if(T.datos){ renderTablero(); }
+  else $('vTablero').innerHTML='<div class="empty"><span class="spinner"></span> Cargando cobros…</div>';
+  api('datosTablero').then(function(d){ T.datos=d; renderTablero(); })
+    .catch(function(e){ if(!T.datos) $('vTablero').innerHTML='<div class="empty">'+esc(e.message)+'<br><br><button class="btn" onclick="cargarTablero()">Reintentar</button></div>'; });
+}
+function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseISO(s){ var p=s.split('-'); return new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); }
+function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function rangoPeriodo(){
+  var T=ESTADO.tab, hoy=parseISO(T.datos.hoy), desde, hasta;
+  if(T.periodo==='hoy'){ desde=hoy; hasta=hoy; }
+  else if(T.periodo==='semana'){ var dow=(hoy.getDay()+6)%7; desde=addDays(hoy,-dow); hasta=hoy; }
+  else if(T.periodo==='mes'){ desde=new Date(hoy.getFullYear(),hoy.getMonth(),1); hasta=hoy; }
+  else if(T.periodo==='mesant'){ desde=new Date(hoy.getFullYear(),hoy.getMonth()-1,1); hasta=new Date(hoy.getFullYear(),hoy.getMonth(),0); }
+  else if(T.periodo==='anio'){ desde=new Date(hoy.getFullYear(),0,1); hasta=hoy; }
+  else { desde=T.desde?parseISO(T.desde):addDays(hoy,-29); hasta=T.hasta?parseISO(T.hasta):hoy; if(hasta<desde){ var tmp=desde; desde=hasta; hasta=tmp; } }
+  var dias=Math.round((hasta-desde)/86400000)+1;
+  var antHasta, antDesde;
+  if(T.periodo==='mes'||T.periodo==='mesant'){ antDesde=new Date(desde.getFullYear(),desde.getMonth()-1,1); antHasta=new Date(antDesde.getFullYear(),antDesde.getMonth(),Math.min(hasta.getDate(), new Date(antDesde.getFullYear(),antDesde.getMonth()+1,0).getDate())); }
+  else { antHasta=addDays(desde,-1); antDesde=addDays(antHasta,-(dias-1)); }
+  return { desde:isoDate(desde), hasta:isoDate(hasta), antDesde:isoDate(antDesde), antHasta:isoDate(antHasta), dias:dias };
+}
+function enRango(f, a, b){ return f>=a && f<=b; }
+function agregar(cobros, detalle, a, b){
+  var cs=cobros.filter(function(c){ return c.estado==='OK' && enRango(c.fecha,a,b); });
+  var ids={}; cs.forEach(function(c){ ids[c.id]=1; });
+  var det=detalle.filter(function(d){ return ids[d.cobroId]; });
+  var total=0, descs=0; cs.forEach(function(c){ total+=c.total; descs+=c.descMonto; });
+  return { cobros:cs, detalle:det, total:total, n:cs.length, prom:cs.length?total/cs.length:0, descs:descs };
+}
+function pct(a,b){ if(!b) return a?'nuevo':'—'; var p=(a-b)/b*100; return (p>=0?'+':'')+p.toFixed(0)+'%'; }
+function kpi(l, v, act, ant, fmtv){ var d=pct(act,ant); var cls=d==='—'||d==='nuevo'?'':(act>=ant?'up':'down'); return '<div class="kpi"><div class="l">'+l+'</div><div class="v">'+(fmtv?fmtv(v):v)+'</div><div class="d '+cls+'">'+d+' vs. período anterior</div></div>'; }
+function normNombre(s){ return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' '); }
+function cap(s){ return s.replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
+
+function renderTablero(){
+  var T=ESTADO.tab, D=T.datos, R=rangoPeriodo();
+  var A=agregar(D.cobros, D.detalle, R.desde, R.hasta), B=agregar(D.cobros, D.detalle, R.antDesde, R.antHasta);
+  var h='';
+  // periodo
+  h+='<div class="periodo">';
+  [['hoy','Hoy'],['semana','Esta semana'],['mes','Este mes'],['mesant','Mes pasado'],['anio','Este año'],['rango','Rango']].forEach(function(p){ h+='<button data-p="'+p[0]+'" class="'+(T.periodo===p[0]?'on':'')+'">'+p[1]+'</button>'; });
+  if(T.periodo==='rango') h+='<input type="date" id="tDesde" value="'+R.desde+'"> <input type="date" id="tHasta" value="'+R.hasta+'">';
+  h+='<span class="muted" style="font-size:13px;margin-left:auto">'+R.desde+' → '+R.hasta+' · comparado con '+R.antDesde+' → '+R.antHasta+'</span>';
+  h+='<button data-p="refresh" class="mini" title="Actualizar">⟳</button></div>';
+  // KPIs
+  h+='<div class="kpis">'+kpi('Facturación',A.total,A.total,B.total,fmt)+kpi('Tickets',A.n,A.n,B.n)+kpi('Ticket promedio',A.prom,A.prom,B.prom,fmt)+kpi('Descuentos otorgados',A.descs,A.descs,B.descs,fmt)+'</div>';
+  // charts
+  h+='<div class="card"><h3>Facturación en el tiempo</h3><div class="chart-wrap tall"><canvas id="chTiempo"></canvas></div></div>';
+  h+='<div class="grid2">';
+  h+='<div class="card"><h3>Por categoría <span class="muted" style="font-weight:400;font-size:13px">(tocá para ver servicios)</span></h3><div id="chCat"></div></div>';
+  h+='<div class="card"><h3>Ranking de servicios<div class="tabs"><button data-r="cant" class="'+(T.rank==='cant'?'on':'')+'">Cantidad</button><button data-r="imp" class="'+(T.rank==='imp'?'on':'')+'">Facturación</button></div></h3><div id="chRank"></div></div>';
+  h+='<div class="card"><h3>Medios de pago</h3><div class="chart-wrap"><canvas id="chMedios"></canvas></div></div>';
+  h+='<div class="card"><h3>Clientes frecuentes</h3><div class="tbl-scroll" id="tClientes"></div></div>';
+  h+='</div>';
+  h+='<div class="card"><h3>Tickets del período <button class="btn small" id="btnCsv" style="margin-left:auto">Exportar CSV</button></h3><input class="buscar" id="tBuscar" placeholder="Buscar por cliente, servicio o medio de pago"><div class="tbl-scroll" id="tTickets"></div></div>';
+  $('vTablero').innerHTML=h;
+
+  $('vTablero').querySelectorAll('[data-p]').forEach(function(b){ b.onclick=function(){ if(b.dataset.p==='refresh'){ T.datos=null; cargarTablero(); return; } T.periodo=b.dataset.p; renderTablero(); }; });
+  if(T.periodo==='rango'){ $('tDesde').onchange=function(){ T.desde=this.value; renderTablero(); }; $('tHasta').onchange=function(){ T.hasta=this.value; renderTablero(); }; }
+  $('vTablero').querySelectorAll('[data-r]').forEach(function(b){ b.onclick=function(){ T.rank=b.dataset.r; renderTablero(); }; });
+
+  dibujarTiempo(A, B, R);
+  dibujarCategorias(A);
+  dibujarRanking(A);
+  dibujarMedios(A);
+  dibujarClientes(D);
+  var lista=function(){ dibujarTickets(A, $('tBuscar').value); };
+  $('tBuscar').oninput=lista; lista();
+  $('btnCsv').onclick=function(){ exportarCsv(A, R); };
+}
+function destruirChart(k){ if(ESTADO.charts[k]){ ESTADO.charts[k].destroy(); delete ESTADO.charts[k]; } }
+var CH_OPTS={ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#1f1f1f' } } }, scales:{ x:{ ticks:{ color:'#7a7570' }, grid:{ display:false } }, y:{ ticks:{ color:'#7a7570', callback:function(v){ return fmt(v); } }, grid:{ color:'#eee' } } } };
+
+function dibujarTiempo(A, B, R){
+  var porSemana = R.dias>45;
+  var clave=function(f){ if(!porSemana) return f; var d=parseISO(f); var dow=(d.getDay()+6)%7; return isoDate(addDays(d,-dow)); };
+  var buckets=[], mapa={}, mapaB={};
+  var d=parseISO(R.desde), fin=parseISO(R.hasta);
+  while(d<=fin){ var k=clave(isoDate(d)); if(!mapa[k] && mapa[k]!==0){ mapa[k]=0; buckets.push(k); } d=addDays(d,1); }
+  A.cobros.forEach(function(c){ var k=clave(c.fecha); mapa[k]=(mapa[k]||0)+c.total; });
+  // período anterior alineado por posición
+  var bucketsB=[]; var db=parseISO(R.antDesde), finb=parseISO(R.antHasta); while(db<=finb){ var kb=clave(isoDate(db)); if(mapaB[kb]===undefined){ mapaB[kb]=0; bucketsB.push(kb);} db=addDays(db,1); }
+  B.cobros.forEach(function(c){ var k=clave(c.fecha); if(mapaB[k]!==undefined) mapaB[k]+=c.total; });
+  var labels=buckets.map(function(k){ var p=k.split('-'); return porSemana?'sem '+p[2]+'/'+p[1]:p[2]+'/'+p[1]; });
+  destruirChart('tiempo');
+  ESTADO.charts.tiempo=new Chart($('chTiempo'),{ type:'bar', data:{ labels:labels, datasets:[
+    { label:'Período actual', data:buckets.map(function(k){return mapa[k];}), backgroundColor:'#1f1f1f', borderRadius:4 },
+    { label:'Período anterior', data:buckets.map(function(k,i){ return bucketsB[i]!==undefined?mapaB[bucketsB[i]]:null; }), type:'line', borderColor:'#b5afa7', backgroundColor:'#b5afa7', pointRadius:2, tension:.3 }
+  ] }, options:CH_OPTS });
+}
+function dibujarCategorias(A){
+  var T=ESTADO.tab, cats={}, srv={};
+  A.detalle.forEach(function(d){ cats[d.categoria]=(cats[d.categoria]||0)+d.importe; var k=d.categoria+'|'+d.servicio+(d.variante?' · '+d.variante:''); srv[k]=(srv[k]||0)+d.importe; });
+  var lista=Object.keys(cats).map(function(c){return {n:c,v:cats[c]};}).sort(function(a,b){return b.v-a.v;});
+  if(!lista.length){ $('chCat').innerHTML='<div class="empty">Sin cobros en el período</div>'; return; }
+  var max=lista[0].v, h='';
+  lista.forEach(function(c){
+    h+='<div class="hbar" data-cat="'+esc(c.n)+'"><span class="n">'+esc(c.n)+'</span><span class="b"><i style="width:'+(c.v/max*100)+'%"></i></span><span class="v">'+fmt(c.v)+'</span></div>';
+    if(T.catAbierta===c.n){
+      var subs=Object.keys(srv).filter(function(k){return k.split('|')[0]===c.n;}).map(function(k){return {n:k.split('|')[1],v:srv[k]};}).sort(function(a,b){return b.v-a.v;});
+      subs.forEach(function(s){ h+='<div class="hbar sub"><span class="n">'+esc(s.n)+'</span><span class="b"><i style="width:'+(s.v/max*100)+'%"></i></span><span class="v">'+fmt(s.v)+'</span></div>'; });
+    }
+  });
+  $('chCat').innerHTML=h;
+  $('chCat').querySelectorAll('[data-cat]').forEach(function(el){ el.onclick=function(){ T.catAbierta=T.catAbierta===el.dataset.cat?null:el.dataset.cat; dibujarCategorias(A); }; });
+}
+function dibujarRanking(A){
+  var T=ESTADO.tab, m={};
+  A.detalle.forEach(function(d){ var k=d.servicio+(d.variante?' · '+d.variante:''); if(!m[k]) m[k]={cant:0,imp:0}; m[k].cant+=d.cantidad; m[k].imp+=d.importe; });
+  var lista=Object.keys(m).map(function(k){return {n:k,v:m[k][T.rank],o:m[k][T.rank==='cant'?'imp':'cant']};}).sort(function(a,b){return b.v-a.v;}).slice(0,10);
+  if(!lista.length){ $('chRank').innerHTML='<div class="empty">Sin cobros en el período</div>'; return; }
+  var max=lista[0].v, h='';
+  lista.forEach(function(c){ h+='<div class="hbar"><span class="n">'+esc(c.n)+'</span><span class="b"><i style="width:'+(c.v/max*100)+'%"></i></span><span class="v">'+(T.rank==='cant'?c.v+' <span class="muted">('+fmt(c.o)+')</span>':fmt(c.v)+' <span class="muted">('+c.o+')</span>')+'</span></div>'; });
+  $('chRank').innerHTML=h;
+}
+function dibujarMedios(A){
+  var m={}; A.cobros.forEach(function(c){ m[c.medio]=(m[c.medio]||0)+c.total; });
+  var keys=Object.keys(m);
+  destruirChart('medios');
+  if(!keys.length){ $('chMedios').parentElement.innerHTML='<div class="empty">Sin cobros en el período</div>'; return; }
+  ESTADO.charts.medios=new Chart($('chMedios'),{ type:'doughnut', data:{ labels:keys, datasets:[{ data:keys.map(function(k){return m[k];}), backgroundColor:['#1f1f1f','#8a837b','#c9c2b8','#5a5450','#e0d9cf','#3d3935'] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#1f1f1f' } }, tooltip:{ callbacks:{ label:function(ctx){ var tot=ctx.dataset.data.reduce(function(a,b){return a+b;},0); return ctx.label+': '+fmt(ctx.parsed)+' ('+(ctx.parsed/tot*100).toFixed(0)+'%)'; } } } } } });
+}
+function dibujarClientes(D){
+  var m={};
+  D.cobros.forEach(function(c){ if(c.estado!=='OK'||!c.cliente) return; var k=normNombre(c.cliente); if(!k) return; if(!m[k]) m[k]={n:c.cliente,visitas:0,total:0,ult:''}; m[k].visitas++; m[k].total+=c.total; if(c.fecha>m[k].ult) m[k].ult=c.fecha; });
+  var lista=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.visitas-a.visitas||b.total-a.total;}).slice(0,30);
+  if(!lista.length){ $('tClientes').innerHTML='<div class="empty">Todavía no hay cobros con nombre de cliente</div>'; return; }
+  var h='<table><tr><th>Cliente</th><th class="num">Visitas</th><th class="num">Total</th><th>Última</th></tr>';
+  lista.forEach(function(c){ h+='<tr><td>'+esc(cap(c.n))+'</td><td class="num">'+c.visitas+'</td><td class="num">'+fmt(c.total)+'</td><td>'+c.ult.split('-').reverse().join('/')+'</td></tr>'; });
+  $('tClientes').innerHTML=h+'</table><p class="muted" style="font-size:12px">Histórico completo, no depende del período.</p>';
+}
+function dibujarTickets(A, q){
+  var D=ESTADO.tab.datos, R=rangoPeriodo();
+  var todos=D.cobros.filter(function(c){ return enRango(c.fecha,R.desde,R.hasta); }).sort(function(a,b){ return (b.fecha+b.hora).localeCompare(a.fecha+a.hora); });
+  var det={}; D.detalle.forEach(function(d){ (det[d.cobroId]=det[d.cobroId]||[]).push(d); });
+  q=normNombre(q||'');
+  var h='<table><tr><th>Fecha</th><th>Cliente</th><th>Servicios</th><th class="num">Total</th><th>Pago</th><th></th></tr>', n=0;
+  todos.forEach(function(c){
+    var servs=(det[c.id]||[]).map(function(d){ return (d.cantidad>1?d.cantidad+'× ':'')+d.servicio+(d.variante?' ('+d.variante+')':''); }).join(', ');
+    if(q && normNombre(c.cliente+' '+servs+' '+c.medio).indexOf(q)<0) return;
+    n++;
+    var anulado=c.estado!=='OK';
+    h+='<tr class="'+(anulado?'anulado':'')+'"><td>'+c.fecha.split('-').reverse().join('/')+' '+c.hora+'</td><td>'+esc(c.cliente||'—')+'</td><td>'+esc(servs)+(c.descMonto?' <span class="muted">(desc. '+fmt(c.descMonto)+')</span>':'')+'</td><td class="num">'+fmt(c.total)+'</td><td>'+esc(c.medio)+'</td><td>'+(anulado?'<span class="muted" style="font-size:12px">'+esc(c.estado)+'</span>':'<button class="mini" data-anular="'+c.id+'" title="Anular ticket">🗑</button>')+'</td></tr>';
+  });
+  $('tTickets').innerHTML = n? h+'</table>' : '<div class="empty">No hay tickets que coincidan</div>';
+  $('tTickets').querySelectorAll('[data-anular]').forEach(function(b){ b.onclick=function(){
+    var c=D.cobros.filter(function(x){return x.id===b.dataset.anular;})[0];
+    confirmar('Anular ticket','¿Anular el cobro de '+fmt(c.total)+' del '+c.fecha.split('-').reverse().join('/')+'? Queda registrado como anulado y sale de las métricas.','Anular',true).then(function(ok){
+      if(!ok) return;
+      api('anularCobro',{id:c.id}).then(function(){ c.estado='ANULADO'; toast('Ticket anulado'); renderTablero(); }).catch(function(e){ toast(e.message,'bad',4000); });
+    });
+  }; });
+}
+function exportarCsv(A, R){
+  var det={}; ESTADO.tab.datos.detalle.forEach(function(d){ (det[d.cobroId]=det[d.cobroId]||[]).push(d); });
+  var filas=[['fecha','hora','cliente','servicios','subtotal','descuento','total','medio_pago']];
+  A.cobros.forEach(function(c){ filas.push([c.fecha,c.hora,c.cliente,(det[c.id]||[]).map(function(d){return (d.cantidad>1?d.cantidad+'x ':'')+d.servicio+(d.variante?' '+d.variante:'');}).join(' | '),c.subtotal,c.descMonto,c.total,c.medio]); });
+  var csv=filas.map(function(r){ return r.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='cobros_'+R.desde+'_'+R.hasta+'.csv'; a.click();
+}
+
+/* =====================================================================
+   Ayuda
+   ===================================================================== */
+var AYUDA_CAJA='<div class="ayuda"><h2>Cómo cobrar</h2>'+
+'<p>1. Tocá cada servicio que se hizo. Queda marcado con ✓ y muestra el precio.</p>'+
+'<p>2. Si el servicio tiene opciones (corto / largo, etc.), al tocarlo aparecen debajo: elegí una.</p>'+
+'<p>3. Si se hizo más de una vez (dos ampollas), usá el + al lado del servicio.</p>'+
+'<p>4. ¿El precio fue distinto esta vez? Tocá el número y escribí el precio real.</p>'+
+'<p>5. Algo que no está en la lista: escribilo en "Otro servicio" con su precio y tocá Agregar.</p>'+
+'<p>6. Para hacer un descuento sobre el total tocá <b>Descuento</b> (en % o en $).</p>'+
+'<p>7. Tocá <b>COBRAR</b>, escribí el nombre de la clienta si querés, y tocá el medio de pago. Listo: aparece "Cobrado" y la hoja queda limpia para el próximo.</p>'+
+'<h3>Si no hay señal</h3><p>El cobro se guarda en la tablet y se envía solo cuando vuelve internet. Arriba aparece cuántos faltan enviar. No cierres la app hasta que desaparezca el aviso.</p>'+
+'<h3>Me equivoqué</h3><p>Antes de cobrar: tocá de nuevo el servicio para quitarlo. Después de cobrar: avisale a quien maneja el panel, desde ahí se anula el ticket.</p></div>';
+var AYUDA_PANEL='<div class="ayuda"><h2>Panel</h2>'+
+'<h3>Precios</h3><p>Tocá un precio, cambialo y salí del campo: se guarda solo. El interruptor apaga un servicio (deja de verse en la caja). ✎ renombra. ↑↓ cambia el orden en que aparece en la caja.</p>'+
+'<p><b>Variantes:</b> "+ variante" convierte un servicio en uno con opciones (Corto / Largo…), cada una con su precio. La caja pide elegir una al cobrar.</p>'+
+'<p>Nada se borra, se apaga. Así los cobros viejos conservan su historial.</p>'+
+'<h3>Tablero</h3><p>Elegí el período arriba. Todos los números y gráficos responden a ese período y se comparan con el período anterior equivalente. Tocá una categoría para ver sus servicios. Abajo está la lista de tickets: buscá, exportá a CSV o anulá uno con 🗑.</p>'+
+'<h3>Ajustes</h3><p>Medios de pago que ve la caja, y cambio de los dos PIN.</p></div>';
+
+/* =====================================================================
+   MOCK para probar sin Apps Script (solo se usa si no hay google.script.run)
+   ===================================================================== */
+var MOCK=(function(){
+  if(ONLINE_GAS) return null;
+  var cats=[['Lavado','Lavado Kerastase',8000],['Lavado',"Lavado L'Oreal",6500],['Corte','Corte Andrea',25000],['Corte','Corte Staff',18000],['Nutrición','Ampollas',9000],['Nutrición','Baño Crema',12000],['Nutrición','Rituales',22000],['Peinados','Modelado',15000],['Peinados','Brushing',14000],['Peinados','Recogido',30000],['Peinados','Recogido Staff',22000],['Color','Reflejos',45000],['Color','Mechas',0,'Corto',48000],['Color','Mechas',0,'Medio',58000],['Color','Mechas',0,'Largo',70000],['Color','Iluminación',52000],['Color',"Tintura L'Oreal / Wella",32000],['Color','INOA',36000],['Color','Henna',28000],['Color','Tono sobre tono',30000],['Belleza','Manos',12000],['Belleza','Pies',15000],['Belleza','Maquillaje',35000],['Belleza','Depilación',10000]];
+  var servicios=cats.map(function(c,i){ return {id:'s'+i, categoria:c[0], servicio:c[1], variante:c[3]||'', precio:c[3]?c[4]:c[2], orden:(i+1)*10, activo:true}; });
+  var medios=['Efectivo','Transferencia','Tarjeta'];
+  var cobros=[], detalle=[];
+  var nombres=['Ana Pérez','Lucía Gómez','ana perez','Marta Ruiz','','Sofía Díaz','Carla M.','','Paula Torres'];
+  var hoy=new Date();
+  for(var d=70; d>=0; d--){ var fecha=new Date(hoy); fecha.setDate(hoy.getDate()-d); if(fecha.getDay()===0) continue; var n=3+Math.floor(Math.random()*8);
+    for(var j=0;j<n;j++){ var id='m'+d+'_'+j; var k=1+Math.floor(Math.random()*3); var sub=0;
+      for(var q=0;q<k;q++){ var s=servicios[Math.floor(Math.random()*servicios.length)]; detalle.push({cobroId:id,servicioId:s.id,categoria:s.categoria,servicio:s.servicio,variante:s.variante,cantidad:1,precio:s.precio,importe:s.precio}); sub+=s.precio; }
+      var desc=Math.random()<.2?Math.round(sub*0.1):0;
+      cobros.push({id:id,fecha:isoDate(fecha),hora:String(10+Math.floor(Math.random()*9)).padStart(2,'0')+':'+String(Math.floor(Math.random()*60)).padStart(2,'0'),cliente:nombres[Math.floor(Math.random()*nombres.length)],subtotal:sub,descTipo:desc?'%':'',descValor:desc?10:0,descMonto:desc,total:sub-desc,medio:medios[Math.floor(Math.random()*3)],estado:'OK'}); } }
+  function catalogo(){ var out=[]; servicios.filter(function(s){return s.activo;}).sort(function(a,b){return a.orden-b.orden;}).forEach(function(s){ var c=out.filter(function(x){return x.categoria===s.categoria;})[0]; if(!c){c={categoria:s.categoria,items:[]};out.push(c);} var it=c.items.filter(function(x){return x.servicio===s.servicio;})[0]; if(!it){it={servicio:s.servicio,variantes:[]};c.items.push(it);} it.variantes.push({id:s.id,variante:s.variante,precio:s.precio}); }); return {categorias:out,mediosPago:medios,negocio:'Andrea Canepa (prueba)'}; }
+  return { apiCall:function(m,json){ var p=JSON.parse(json||'{}'); var ok=function(d){return JSON.stringify({ok:true,data:d});};
+    try{ switch(m){
+      case 'loginPin': if(p.pin==='1111') return ok({token:'t',rol:'caja'}); if(p.pin==='2222') return ok({token:'t',rol:'panel'}); throw new Error('PIN incorrecto.');
+      case 'catalogo': return ok(catalogo());
+      case 'registrarCobro': { if(cobros.some(function(c){return c.id===p.id;})) return ok({id:p.id,duplicado:true}); var sub=0; p.items.forEach(function(it){ var s=servicios.filter(function(x){return x.id===it.servicioId;})[0]; var pr=it.servicioId==='OTROS'?it.precio:(it.precio!=null?it.precio:s.precio); var imp=pr*it.cantidad; sub+=imp; detalle.push({cobroId:p.id,servicioId:it.servicioId,categoria:s?s.categoria:'Otros',servicio:s?s.servicio:it.descripcion,variante:s?s.variante:'',cantidad:it.cantidad,precio:pr,importe:imp}); }); var dm=p.descTipo==='%'?sub*p.descValor/100:(p.descTipo==='$'?p.descValor:0); var now=new Date(); cobros.push({id:p.id,fecha:isoDate(now),hora:now.toTimeString().slice(0,5),cliente:p.cliente,subtotal:sub,descTipo:p.descTipo,descValor:p.descValor,descMonto:dm,total:sub-dm,medio:p.medioPago,estado:'OK'}); return ok({id:p.id,total:sub-dm}); }
+      case 'listarServicios': return ok({servicios:servicios.slice().sort(function(a,b){return a.orden-b.orden;}),mediosPago:medios});
+      case 'crearServicio': { var mx=Math.max.apply(null,servicios.map(function(s){return s.orden;})); servicios.push({id:'s'+Date.now(),categoria:p.categoria,servicio:p.servicio,variante:p.variante||'',precio:p.precio||0,orden:mx+10,activo:true}); return ok(true); }
+      case 'actualizarServicio': { var s=servicios.filter(function(x){return x.id===p.id;})[0]; if(p.precio!==undefined) s.precio=p.precio; if(p.activo!==undefined) s.activo=p.activo; if(p.servicio!==undefined) servicios.forEach(function(x){ if(x.categoria===s.categoria&&x.servicio===s.servicio) x.servicio=p.servicio; }); if(p.variante!==undefined) s.variante=p.variante; return ok(true); }
+      case 'moverServicio': case 'moverCategoria': return ok(true);
+      case 'renombrarCategoria': servicios.forEach(function(x){ if(x.categoria===p.vieja) x.categoria=p.nueva; }); return ok(true);
+      case 'guardarMediosPago': medios=p.lista; return ok(medios);
+      case 'cambiarPin': return ok(true);
+      case 'datosTablero': return ok({cobros:cobros,detalle:detalle,mediosPago:medios,hoy:isoDate(new Date())});
+      case 'anularCobro': cobros.filter(function(c){return c.id===p.id;})[0].estado='ANULADO'; return ok(true);
+      default: throw new Error('Método desconocido: '+m);
+    } }catch(e){ return JSON.stringify({ok:false,error:e.message}); } } };
+})();
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+renderLogin();
+(function(){
+  var tok=lsGet(LS.token,null), rol=lsGet(LS.rol,null);
+  if(tok && rol){ entrar(rol); api('sesion').catch(function(){ /* si venció, api() ya cerró sesión */ }); }
+  else mostrar('login');
+})();
+</script>
+</body>
+</html>
