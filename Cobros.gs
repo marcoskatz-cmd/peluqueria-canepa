@@ -95,7 +95,7 @@ function anularCobro_(id, motivo) {
 function datosTablero_() {
   var cobros = leerObjetos_(SHEETS.COBROS, COLS.COBROS).map(function (f) {
     return {
-      id: str_(f.id), fecha: fechaCelda_(f.fecha), hora: str_(f.hora), cliente: str_(f.cliente),
+      id: str_(f.id), fecha: fechaCelda_(f.fecha), hora: horaCelda_(f.hora), cliente: str_(f.cliente),
       subtotal: num_(f.subtotal), descTipo: str_(f.desc_tipo), descValor: num_(f.desc_valor), descMonto: num_(f.desc_monto),
       total: num_(f.total), medio: str_(f.medio_pago), estado: str_(f.estado) || 'OK'
     };

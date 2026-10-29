@@ -5,7 +5,8 @@
 var METODOS_PUBLICOS = { loginPin: true, ping: true };
 var SOLO_PANEL = {
   listarServicios: 1, crearServicio: 1, actualizarServicio: 1, moverServicio: 1, moverCategoria: 1,
-  renombrarCategoria: 1, guardarMediosPago: 1, datosTablero: 1, anularCobro: 1, cambiarPin: 1
+  renombrarCategoria: 1, guardarMediosPago: 1, datosTablero: 1, anularCobro: 1, cambiarPin: 1,
+  sembrarDemo: 1, borrarDemo: 1
 };
 
 function apiCall(metodo, payloadJson) {
@@ -46,6 +47,10 @@ function enrutar_(m, p, sesion) {
     // Tablero
     case 'datosTablero': return datosTablero_();
     case 'anularCobro': return anularCobro_(p.id, p.motivo);
+
+    // Demo
+    case 'sembrarDemo': return sembrarDatosDemo();
+    case 'borrarDemo': return borrarDatosDemo();
 
     default: throw new Error('Método desconocido: ' + m);
   }

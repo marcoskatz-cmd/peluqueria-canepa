@@ -1,0 +1,5 @@
+manifest.json
+icon.svg
+docs/**
+.git/**
+*.md

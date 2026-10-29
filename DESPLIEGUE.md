@@ -35,7 +35,13 @@ En el editor: **Implementar → Nueva implementación → Aplicación web**. Eje
 
 Con clasp: `clasp deploy` (primera vez) y después `clasp push -f && clasp deploy -i <deploymentId>` para actualizar sin cambiar la URL.
 
-## 5. Instalar en la tablet
+## 5. Frontend en GitHub Pages (recomendado)
+
+La misma `index.html` se hospeda en GitHub Pages (repo `peluqueria-canepa`, rama main, raíz). Le habla al Apps Script por `fetch` sin cookies (constante `API_URL` en index.html), así abre bien aunque el navegador tenga varias cuentas de Google. Si cambia la URL `/exec`, actualizar `API_URL`.
+
+Abrir `index.html` como `file://` usa datos de prueba en memoria; servido por http usa la API real.
+
+## 6. Instalar en la tablet
 
 Abrí la URL en Chrome de la tablet → menú ⋮ → *Agregar a pantalla de inicio*. Ingresá el PIN de caja una vez: queda recordado 90 días.
 

@@ -61,6 +61,7 @@ function sembrarServicios_() {
 function formatearHojas_(ss) {
   var cob = ss.getSheetByName(SHEETS.COBROS);
   cob.getRange('B2:B').setNumberFormat('yyyy-mm-dd');
+  cob.getRange('C2:C').setNumberFormat('@'); // hora como texto
   cob.getRange('E2:E').setNumberFormat('#,##0.00');
   cob.getRange('H2:I').setNumberFormat('#,##0.00');
   var det = ss.getSheetByName(SHEETS.DETALLE);

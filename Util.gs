@@ -90,6 +90,12 @@ function fechaCelda_(v) {
   return str_(v).slice(0, 10);
 }
 
+/** Devuelve 'HH:mm' tanto si la celda trae Date (Sheets la interpretó como hora) como string. */
+function horaCelda_(v) {
+  if (v instanceof Date) return fmtHora_(v);
+  return str_(v).slice(0, 5);
+}
+
 function nuevoId_() {
   return Utilities.getUuid().replace(/-/g, '').slice(0, 12);
 }

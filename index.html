@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Andrea Canepa — Caja</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f6f4f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Caja AC">
 <style>
   :root{
     --bg:#f6f4f1; --card:#fff; --ink:#1f1f1f; --muted:#7a7570; --line:#e4e0da;
@@ -241,6 +246,10 @@ function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e)
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 var ONLINE_GAS = !!(window.google && google.script && google.script.run);
+// URL del Apps Script publicado. Se usa cuando la página está hospedada fuera de Google (GitHub Pages):
+// fetch sin cookies = siempre anónimo, sin importar cuántas cuentas de Google tenga el navegador.
+var API_URL = 'https://script.google.com/macros/s/AKfycbzfMnNeXejKScnseWQI5VOKoJItmL1SQAqCD4eCTDRoOnuNL1DQm-aZjMyaDMn_MLlapQ/exec';
+var MODO = ONLINE_GAS ? 'gas' : (location.protocol === 'file:' ? 'mock' : 'fetch');
 
 function api(metodo, payload){
   payload = payload || {};
@@ -254,8 +263,14 @@ function api(metodo, payload){
       }
       res(r.data);
     };
-    if(ONLINE_GAS){
+    if(MODO === 'gas'){
       google.script.run.withSuccessHandler(done).withFailureHandler(function(e){ rej(new Error('Sin conexión con el servidor')); }).apiCall(metodo, JSON.stringify(payload));
+    } else if(MODO === 'fetch'){
+      // text/plain evita el preflight CORS; credentials omit evita el problema de múltiples cuentas de Google
+      fetch(API_URL, { method:'POST', credentials:'omit', redirect:'follow', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ metodo:metodo, payload:payload }) })
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+        .then(done)
+        .catch(function(){ rej(new Error('Sin conexión con el servidor')); });
     } else {
       setTimeout(function(){ try{ done(MOCK.apiCall(metodo, JSON.stringify(payload))); }catch(e){ rej(e); } }, 150);
     }
@@ -607,6 +622,7 @@ $('vPrecios').addEventListener('click', function(e){
 function renderAjustes(){
   var medios=ESTADO.panel.medios||[];
   var h='<div class="card"><h3>Medios de pago</h3><div id="mediosLista"></div><div class="row" style="margin-top:8px"><input id="medioNuevo" class="buscar" style="margin:0" placeholder="Nuevo medio de pago"><button class="btn small" id="medioAdd">Agregar</button></div></div>';
+  h+='<div class="card"><h3>Datos de demostración</h3><p class="muted" style="font-size:13px;margin:0 0 8px">Carga un mes de cobros inventados (y precios si están en 0) para mostrar el sistema. Se borran de un toque sin tocar los cobros reales.</p><div class="row"><button class="btn small" id="demoSembrar">Cargar mes de prueba</button><button class="btn small danger" id="demoBorrar">Borrar datos de prueba</button></div></div>';
   h+='<div class="card"><h3>PIN de la caja</h3><div class="row"><input id="pinCaja" class="buscar" style="margin:0" type="password" inputmode="numeric" placeholder="Nuevo PIN (4 a 8 dígitos)"><button class="btn small" data-pin="caja">Cambiar</button></div></div>';
   h+='<div class="card"><h3>PIN del panel</h3><div class="row"><input id="pinPanel" class="buscar" style="margin:0" type="password" inputmode="numeric" placeholder="Nuevo PIN (4 a 8 dígitos)"><button class="btn small" data-pin="panel">Cambiar</button></div><p class="muted" style="font-size:13px">Si cambiás el PIN del panel, la próxima vez que entres acá vas a usar el nuevo.</p></div>';
   $('vAjustes').innerHTML=h;
@@ -615,6 +631,8 @@ function renderAjustes(){
   pintar();
   $('mediosLista').onclick=function(e){ var b=e.target.closest('[data-del]'); if(!b) return; confirmar('Quitar medio de pago','¿Quitar "'+medios[b.dataset.del]+'"? Los cobros viejos lo conservan.','Quitar',true).then(function(ok){ if(ok){ medios.splice(Number(b.dataset.del),1); guardar(); } }); };
   $('medioAdd').onclick=function(){ var v=$('medioNuevo').value.trim(); if(!v) return; if(medios.some(function(m){return m.toLowerCase()===v.toLowerCase();})){ toast('Ya existe','bad'); return; } medios.push(v); $('medioNuevo').value=''; guardar(); };
+  $('demoSembrar').onclick=function(){ confirmar('Cargar datos de prueba','Se agregan unos 300 tickets inventados de los últimos 30 días. ¿Seguimos?','Cargar').then(function(ok){ if(!ok) return; toast('Generando…','info',4000); api('sembrarDemo').then(function(r){ ESTADO.tab.datos=null; toast('Listo: '+r.tickets+' tickets de prueba ✓','',3000); }).catch(function(e){ toast(e.message,'bad',5000); }); }); };
+  $('demoBorrar').onclick=function(){ confirmar('Borrar datos de prueba','Se eliminan solo los tickets de prueba. Los cobros reales no se tocan.','Borrar',true).then(function(ok){ if(!ok) return; api('borrarDemo').then(function(r){ ESTADO.tab.datos=null; toast('Borrados ✓'); }).catch(function(e){ toast(e.message,'bad',5000); }); }); };
   $('vAjustes').querySelectorAll('[data-pin]').forEach(function(b){ b.onclick=function(){
     var rol=b.dataset.pin; var inp=$(rol==='caja'?'pinCaja':'pinPanel'); var v=inp.value.trim();
     if(!/^\d{4,8}$/.test(v)){ toast('El PIN tiene que ser de 4 a 8 dígitos','bad'); return; }
@@ -814,7 +832,7 @@ var AYUDA_PANEL='<div class="ayuda"><h2>Panel</h2>'+
    MOCK para probar sin Apps Script (solo se usa si no hay google.script.run)
    ===================================================================== */
 var MOCK=(function(){
-  if(ONLINE_GAS) return null;
+  if(MODO !== 'mock') return null;
   var cats=[['Lavado','Lavado Kerastase',8000],['Lavado',"Lavado L'Oreal",6500],['Corte','Corte Andrea',25000],['Corte','Corte Staff',18000],['Nutrición','Ampollas',9000],['Nutrición','Baño Crema',12000],['Nutrición','Rituales',22000],['Peinados','Modelado',15000],['Peinados','Brushing',14000],['Peinados','Recogido',30000],['Peinados','Recogido Staff',22000],['Color','Reflejos',45000],['Color','Mechas',0,'Corto',48000],['Color','Mechas',0,'Medio',58000],['Color','Mechas',0,'Largo',70000],['Color','Iluminación',52000],['Color',"Tintura L'Oreal / Wella",32000],['Color','INOA',36000],['Color','Henna',28000],['Color','Tono sobre tono',30000],['Belleza','Manos',12000],['Belleza','Pies',15000],['Belleza','Maquillaje',35000],['Belleza','Depilación',10000]];
   var servicios=cats.map(function(c,i){ return {id:'s'+i, categoria:c[0], servicio:c[1], variante:c[3]||'', precio:c[3]?c[4]:c[2], orden:(i+1)*10, activo:true}; });
   var medios=['Efectivo','Transferencia','Tarjeta'];
